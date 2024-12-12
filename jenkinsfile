@@ -58,3 +58,8 @@ pipeline {
             echo 'Terraform deployment successful!'
         }
         failure {
+            echo 'Terraform deployment failed!'
+        }
+    }
+}
+
