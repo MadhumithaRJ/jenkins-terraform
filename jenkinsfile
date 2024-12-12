@@ -1,53 +1,45 @@
 pipeline {
     agent any
-
+    
     environment {
-        TF_VERSION = '1.10.2' // Updated Terraform version
-        AWS_ACCESS_KEY_ID = credentials('ce31b006-0622-4767-8c3f-398c9d0b49f0')     // Jenkins credential ID for AWS Access Key
-        AWS_SECRET_ACCESS_KEY = credentials('7879b89f-461b-4f7e-a136-d008a98b59ae') // Jenkins credential ID for AWS Secret Key
+        AWS_ACCESS_KEY_ID = credentials('ce31b006-0622-4767-8c3f-398c9d0b49f0') // Use the correct Jenkins credentials ID
+        AWS_SECRET_ACCESS_KEY = credentials('7879b89f-461b-4f7e-a136-d008a98b59ae') // Use the correct Jenkins credentials ID
     }
-
+    
     stages {
-        stage('Checkout') {
+        stage('Fetch Latest Code') {
             steps {
-                echo "Checking out code from repository..."
-                checkout scm
+                git branch: 'master', url: 'https://github.com/MadhumithaRJ/jenkins-terraform.git'
             }
         }
 
-        stage('Install Terraform') {
+        stage('TF Init and Plan') {
             steps {
-                echo "Installing Terraform..."
-                sh """
-                if ! command -v terraform &> /dev/null; then
-                    wget https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
-                    unzip terraform_${TF_VERSION}_linux_amd64.zip
-                    sudo mv terraform /usr/local/bin/
-                else
-                    echo "Terraform already installed."
-                fi
-                """
-                sh 'terraform --version'
-            }
-        }
-
-        stage('Terraform Init') {
-            steps {
-                echo "Initializing Terraform..."
                 sh 'terraform init'
-            }
-        }
-
-        stage('Terraform Plan') {
-            steps {
-                echo "Planning Terraform changes..."
                 sh 'terraform plan'
             }
         }
 
-        stage('Terraform Apply') {
+        stage('Approval') {
             steps {
-                echo "Applying Terraform changes..."
+                script {
+                    def userInput = input(
+                        id: 'Approval',
+                        message: 'Approve the deployment?',
+                        parameters: [
+                            choice(name: 'Deploy', choices: ['Yes', 'No'], description: 'Do you want to proceed with deployment?')
+                        ]
+                    )
+                    
+                    if (userInput == 'No') {
+                        error 'Deployment aborted by the user'
+                    }
+                }
+            }
+        }
+
+        stage('TF Apply') {
+            steps {
                 sh 'terraform apply -auto-approve'
             }
         }
@@ -55,11 +47,25 @@ pipeline {
 
     post {
         success {
-            echo 'Terraform deployment successful!'
+            echo 'Deployment successful!'
         }
         failure {
-            echo 'Terraform deployment failed!'
+            echo 'Deployment failed!'
         }
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
